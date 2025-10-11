@@ -1,0 +1,81 @@
+// rbac-server.js
+
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+
+const PORT = 5000;
+const SECRET_KEY = 'mysecretkey';
+
+// Sample users with roles
+const users = [
+  { username: 'admin', password: 'admin123', role: 'admin' },
+  { username: 'mod', password: 'mod123', role: 'moderator' },
+  { username: 'user', password: 'user123', role: 'user' },
+];
+
+// JWT verification middleware
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+    req.user = decoded; // contains username & role
+    next();
+  });
+};
+
+// Role-based access middleware
+const authorizeRoles = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+    if (!allowedRoles.includes(req.user.role))
+      return res.status(403).json({ message: 'Forbidden: Insufficient role' });
+    next();
+  };
+};
+
+// Login route - issues JWT with role
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  const user = users.find(u => u.username === username && u.password === password);
+
+  if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+
+  // Sign JWT including the role
+  const token = jwt.sign({ username: user.username, role: user.role }, SECRET_KEY, { expiresIn: '1h' });
+  res.json({ token });
+});
+
+// Public route
+app.get('/', (req, res) => {
+  res.send('Public Route: Accessible by anyone');
+});
+
+// Admin-only route
+app.get('/admin', verifyToken, authorizeRoles('admin'), (req, res) => {
+  res.json({ message: `Welcome Admin ${req.user.username}!` });
+});
+
+// Moderator-only route
+app.get('/moderator', verifyToken, authorizeRoles('moderator'), (req, res) => {
+  res.json({ message: `Welcome Moderator ${req.user.username}!` });
+});
+
+// User route (any logged-in user)
+app.get('/profile', verifyToken, authorizeRoles('user', 'admin', 'moderator'), (req, res) => {
+  res.json({ message: `Hello ${req.user.username}, this is your profile.` });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`RBAC server running on http://localhost:${PORT}`);
+});
