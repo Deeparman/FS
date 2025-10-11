@@ -1,0 +1,119 @@
+//server.js
+const express = require('express');
+const http = require('http');
+const cors = require('cors');
+const { Server } = require('socket.io');
+
+const app = express();
+app.use(cors());
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: '*', // allow frontend connection
+    methods: ['GET', 'POST']
+  }
+});
+
+// Handle socket connection
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.id}`);
+
+  // Receive a message from client and broadcast
+  socket.on('chat message', (msg) => {
+    io.emit('chat message', msg);
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
+});
+
+// Simple API route
+app.get('/', (req, res) => {
+  res.send('Socket.io server running');
+});
+
+const PORT = 5000;
+server.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
+//chat.jsx
+import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:5000');
+
+const Chat = () => {
+  const [name, setName] = useState('');
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    // Listen for incoming messages
+    socket.on('chat message', (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    return () => {
+      socket.off('chat message');
+    };
+  }, []);
+
+  const sendMessage = () => {
+    if (name && message) {
+      socket.emit('chat message', { name, message });
+      setMessage('');
+    }
+  };
+
+  return (
+    <div>
+      <h2>Real-Time Chat</h2>
+      <div>
+        <input
+          type="text"
+          placeholder="Your name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+      <div>
+        <input
+          type="text"
+          placeholder="Message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+        />
+        <button onClick={sendMessage}>Send</button>
+      </div>
+      <ul>
+        {messages.map((msg, idx) => (
+          <li key={idx}>
+            <strong>{msg.name}:</strong> {msg.message}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+export default Chat;
+
+//app.jsx
+import React from 'react';
+import Chat from './components/Chat';
+
+function App() {
+  return (
+    <div className="App">
+      <h1>Chat Application</h1>
+      <Chat />
+    </div>
+  );
+}
+
+export default App;
