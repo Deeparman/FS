@@ -1,0 +1,92 @@
+// models/User.js
+const mongoose = require('mongoose');
+
+const UserSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  balance: { type: Number, required: true, min: 0 }
+});
+
+module.exports = mongoose.model('User', UserSchema);
+
+// server.js
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const User = require('./models/User');
+
+const app = express();
+const PORT = 3000;
+
+app.use(bodyParser.json());
+
+// Connect to MongoDB
+mongoose.connect('mongodb://127.0.0.1:27017/bank', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("Connected to MongoDB"))
+.catch(err => console.error("MongoDB connection error:", err));
+
+
+
+// Create user (for testing)
+app.post('/users', async (req, res) => {
+  const { name, balance } = req.body;
+  try {
+    const user = new User({ name, balance });
+    await user.save();
+    res.json({ message: "User created", user });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Transfer money endpoint
+app.post('/transfer', async (req, res) => {
+  const { senderName, receiverName, amount } = req.body;
+
+  if (!senderName || !receiverName || !amount || amount <= 0) {
+    return res.status(400).json({ error: "Invalid transfer data" });
+  }
+
+  try {
+    // Find sender and receiver
+    const sender = await User.findOne({ name: senderName });
+    const receiver = await User.findOne({ name: receiverName });
+
+    if (!sender) return res.status(404).json({ error: "Sender not found" });
+    if (!receiver) return res.status(404).json({ error: "Receiver not found" });
+
+    // Check sender balance
+    if (sender.balance < amount) {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
+
+    // Sequential updates (no transaction)
+    sender.balance -= amount;
+    receiver.balance += amount;
+
+    await sender.save();
+    await receiver.save();
+
+    res.json({
+      message: `Transferred ${amount} from ${senderName} to ${receiverName}`,
+      senderBalance: sender.balance,
+      receiverBalance: receiver.balance
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// View all users (for testing)
+app.get('/users', async (req, res) => {
+  const users = await User.find();
+  res.json(users);
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
