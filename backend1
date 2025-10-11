@@ -1,0 +1,41 @@
+const express = require('express');
+const app = express();
+const PORT = 3000;
+
+
+const loggerMiddleware = (req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.url}`);
+    next(); // Pass control to next middleware/route
+};
+
+
+const authMiddleware = (req, res, next) => {
+    const authHeader = req.headers['authorization']; // Get Authorization header
+    if (!authHeader) {
+        return res.status(401).json({ error: "Authorization header missing" });
+    }
+
+    const token = authHeader.split(' ')[1]; // Bearer <token>
+    if (token !== 'mysecrettoken') {
+        return res.status(403).json({ error: "Invalid token" });
+    }
+
+    next(); // Token is valid, allow access
+};
+
+app.use(loggerMiddleware);
+
+
+app.get('/public', (req, res) => {
+    res.json({ message: "This is a public route. Accessible without token." });
+});
+
+app.get('/protected', authMiddleware, (req, res) => {
+    res.json({ message: "This is a protected route. Access granted!" });
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
