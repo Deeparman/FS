@@ -1,0 +1,80 @@
+//server.js
+const express = require('express');
+const cors = require('cors');
+const app = express();
+const PORT = 5000;
+
+// Enable CORS for frontend connection
+app.use(cors());
+
+// Sample products
+const products = [
+  { id: 1, name: "Laptop", price: 1200 },
+  { id: 2, name: "Phone", price: 800 },
+  { id: 3, name: "Headphones", price: 150 }
+];
+
+// GET /products route
+app.get('/products', (req, res) => {
+  res.json(products);
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
+//productList.jsx
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const ProductList = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    axios.get('http://localhost:5000/products')
+      .then(res => {
+        setProducts(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError("Failed to fetch products");
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <p>Loading products...</p>;
+  if (error) return <p>{error}</p>;
+
+  return (
+    <div>
+      <h2>Product List</h2>
+      <ul>
+        {products.map(product => (
+          <li key={product.id}>
+            <strong>{product.name}</strong>: ${product.price}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+export default ProductList;
+
+//app.jsx
+import React from 'react';
+import ProductList from './components/ProductList';
+
+function App() {
+  return (
+    <div className="App">
+      <h1>My Store</h1>
+      <ProductList />
+    </div>
+  );
+}
+
+export default App;
