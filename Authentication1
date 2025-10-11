@@ -1,0 +1,72 @@
+loginform.jsx
+import React, { useState } from 'react';
+
+const LoginForm = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // Basic validation
+    if (!username || !password) {
+      setError('Both fields are required');
+      return;
+    }
+
+    setError('');
+    console.log('Username:', username);
+    console.log('Password:', password);
+
+    // Reset fields (optional)
+    setUsername('');
+    setPassword('');
+  };
+
+  return (
+    <div style={{ maxWidth: '300px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '5px' }}>
+      <h2>Login Form</h2>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '10px' }}>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            style={{ width: '100%', padding: '8px' }}
+          />
+        </div>
+        <div style={{ marginBottom: '10px' }}>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{ width: '100%', padding: '8px' }}
+          />
+        </div>
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+        <button type="submit" style={{ padding: '8px 16px' }}>Login</button>
+      </form>
+    </div>
+  );
+};
+
+export default LoginForm;
+
+
+//app.jsx
+import React from 'react';
+import LoginForm from './components/LoginForm';
+
+function App() {
+  return (
+    <div className="App">
+      <LoginForm />
+    </div>
+  );
+}
+
+export default App;
+
