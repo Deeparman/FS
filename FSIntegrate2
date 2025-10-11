@@ -1,0 +1,136 @@
+//cartSlice.jsx
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+  items: []  // array of {id, name, price, quantity}
+};
+
+const cartSlice = createSlice({
+  name: 'cart',
+  initialState,
+  reducers: {
+    addItem: (state, action) => {
+      const item = state.items.find(i => i.id === action.payload.id);
+      if (item) {
+        item.quantity += 1; // increase quantity if already in cart
+      } else {
+        state.items.push({ ...action.payload, quantity: 1 });
+      }
+    },
+    removeItem: (state, action) => {
+      state.items = state.items.filter(i => i.id !== action.payload);
+    },
+    updateQuantity: (state, action) => {
+      const item = state.items.find(i => i.id === action.payload.id);
+      if (item) {
+        item.quantity = action.payload.quantity;
+      }
+    },
+    clearCart: (state) => {
+      state.items = [];
+    }
+  }
+});
+
+export const { addItem, removeItem, updateQuantity, clearCart } = cartSlice.actions;
+export default cartSlice.reducer;
+
+//store.jsx
+import { configureStore } from '@reduxjs/toolkit';
+import cartReducer from './cartSlice';
+
+export const store = configureStore({
+  reducer: {
+    cart: cartReducer
+  }
+});
+
+
+//productlist.jsx
+import React from 'react';
+import { useDispatch } from 'react-redux';
+import { addItem } from '../store/cartSlice';
+
+const products = [
+  { id: 1, name: "Laptop", price: 1200 },
+  { id: 2, name: "Phone", price: 800 },
+  { id: 3, name: "Headphones", price: 150 }
+];
+
+const ProductList = () => {
+  const dispatch = useDispatch();
+
+  return (
+    <div>
+      <h2>Products</h2>
+      <ul>
+        {products.map(p => (
+          <li key={p.id}>
+            {p.name} - ${p.price} 
+            <button onClick={() => dispatch(addItem(p))}>Add to Cart</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+export default ProductList;
+
+//cart.jsx
+import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { removeItem, updateQuantity, clearCart } from '../store/cartSlice';
+
+const Cart = () => {
+  const items = useSelector(state => state.cart.items);
+  const dispatch = useDispatch();
+
+  const handleQuantityChange = (id, quantity) => {
+    dispatch(updateQuantity({ id, quantity: Number(quantity) }));
+  };
+
+  if (items.length === 0) return <p>Cart is empty</p>;
+
+  return (
+    <div>
+      <h2>Shopping Cart</h2>
+      <ul>
+        {items.map(item => (
+          <li key={item.id}>
+            {item.name} - ${item.price} × 
+            <input 
+              type="number" 
+              value={item.quantity} 
+              min="1" 
+              onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+            />
+            <button onClick={() => dispatch(removeItem(item.id))}>Remove</button>
+          </li>
+        ))}
+      </ul>
+      <p>Total: ${items.reduce((sum, i) => sum + i.price * i.quantity, 0)}</p>
+      <button onClick={() => dispatch(clearCart())}>Clear Cart</button>
+    </div>
+  );
+};
+
+export default Cart;
+
+
+//app.jsx
+import React from 'react';
+import ProductList from './components/ProductList';
+import Cart from './components/Cart';
+
+function App() {
+  return (
+    <div className="App">
+      <h1>My Store</h1>
+      <ProductList />
+      <Cart />
+    </div>
+  );
+}
+
+export default App;
