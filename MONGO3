@@ -1,0 +1,82 @@
+// ecommerceCatalog.js
+import mongoose from "mongoose";
+
+const variantSchema = new mongoose.Schema({
+  color: { type: String, required: true },
+  size: { type: String, required: true },
+  stock: { type: Number, required: true, min: 0 }
+});
+
+const productSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  price: { type: Number, required: true },
+  category: { type: String, required: true },
+  variants: [variantSchema]
+});
+
+const Product = mongoose.model("Product", productSchema);
+
+const run = async () => {
+  await mongoose.connect("mongodb://127.0.0.1:27017/ecommerceDB");
+  await Product.deleteMany({});
+  await Product.insertMany([
+    {
+      name: "T-Shirt",
+      price: 499,
+      category: "Clothing",
+      variants: [
+        { color: "Red", size: "M", stock: 20 },
+        { color: "Blue", size: "L", stock: 15 }
+      ]
+    },
+    {
+      name: "Sneakers",
+      price: 2999,
+      category: "Footwear",
+      variants: [
+        { color: "Black", size: "9", stock: 10 },
+        { color: "White", size: "10", stock: 5 }
+      ]
+    },
+    {
+      name: "Backpack",
+      price: 1599,
+      category: "Accessories",
+      variants: [
+        { color: "Gray", size: "Medium", stock: 12 },
+        { color: "Blue", size: "Large", stock: 8 }
+      ]
+    }
+  ]);
+
+  const allProducts = await Product.find();
+  console.log("All Products:", allProducts);
+
+  const footwear = await Product.find({ category: "Footwear" });
+  console.log("Footwear:", footwear);
+
+  const projected = await Product.find({}, { name: 1, variants: 1, _id: 0 });
+  console.log("Name and Variants:", projected);
+
+  const redVariants = await Product.find({ "variants.color": "Red" });
+  console.log("Products with Red Variants:", redVariants);
+
+  await Product.updateOne(
+    { name: "T-Shirt", "variants.color": "Red", "variants.size": "M" },
+    { $set: { "variants.$.stock": 25 } }
+  );
+  console.log("Updated Stock for T-Shirt Red M");
+
+  await Product.updateOne(
+    { name: "Sneakers" },
+    { $push: { variants: { color: "Gray", size: "8", stock: 7 } } }
+  );
+  console.log("Added new variant to Sneakers");
+
+  const finalData = await Product.find();
+  console.log("Final Data:", finalData);
+
+  mongoose.connection.close();
+};
+
+run();
