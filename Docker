@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>React Docker App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+
+
+
+import React from "react";
+import "./App.css";
+
+function App() {
+  return (
+    <div style={{
+      textAlign: "center",
+      marginTop: "20%",
+      fontFamily: "Arial, sans-serif"
+    }}>
+      <h1>🚀 React App Running in Docker!</h1>
+      <p>This app was built using a multi-stage Docker build.</p>
+    </div>
+  );
+}
+
+export default App;
+
+
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+
+
+
+# Stage 1 — Build the React app
+FROM node:18 AS build
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Stage 2 — Serve with Nginx
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+
+
+node_modules
+build
+Dockerfile
+.dockerignore
+.git
+.gitignore
+README.md
+npm-debug.log
+
