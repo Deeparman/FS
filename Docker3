@@ -1,0 +1,86 @@
+// server/index.js
+const express = require('express');
+const os = require('os');
+const app = express();
+const port = process.env.PORT || 3000;
+
+// simple API
+app.get('/api/hello', (req, res) => {
+  res.json({ message: `Hello from backend on ${os.hostname()}` });
+});
+
+// health check for ALB
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+
+
+
+
+{
+  "name": "demo-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
+
+
+#!/bin/bash
+# ubuntu example (works on Amazon Linux with slight modifications)
+# install Node 18 LTS (Ubuntu)
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+apt-get update
+apt-get install -y nodejs git build-essential
+
+# install pm2
+npm install -g pm2
+
+# deploy app
+cd /home/ubuntu
+if [ ! -d "demo-backend" ]; then
+  git clone https://github.com/<your-username>/<your-backend-repo>.git demo-backend
+else
+  cd demo-backend
+  git pull
+fi
+cd demo-backend/server || exit 1
+npm ci
+
+# start app with pm2
+pm2 start index.js --name demo-backend
+pm2 save
+# ensure pm2 resurrects at boot
+pm2 startup systemd -u ubuntu --hp /home/ubuntu
+
+
+
+#!/bin/bash
+apt-get update
+apt-get install -y nginx git curl
+
+# install node
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+apt-get install -y nodejs
+
+cd /var/www
+git clone https://github.com/<your-username>/<your-frontend-repo>.git react-frontend
+cd react-frontend
+npm ci
+npm run build
+
+# copy build into nginx default www
+rm -rf /var/www/html/*
+cp -r build/* /var/www/html/
+
+# restart nginx
+systemctl enable nginx
+systemctl restart nginx
